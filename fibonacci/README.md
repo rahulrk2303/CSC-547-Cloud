@@ -1,0 +1,101 @@
+# Fibonacci App in AWS 
+
+-  Make sure you have created AWS Key Pair and have access to the .pem file.
+
+-  Cloud Formation
+    -  Search "CloudFormation" in AWS Console
+    -  Click "Create Stack" and select "With new resources (standard)"
+    -  Under "Specify template", select "Upload a template file"
+    -  Upload "template.json" file
+    -  (Optional) To visualize the template, click "View in Designer"
+      -  You can also drag and drop resources and create appropriate connections to modify the infrastructure
+      -  Click the "Create Stack" (Cloud upload icon) button on the top left.
+    -  Click "Next"
+    -  Enter a stack name. For example, "FibonacciApp"
+    -  Select Instance type "t2.micro"
+    -  For KeyName, select key you created "aws-<unityID>"
+    -  Click "Next"
+    -  Leave the default settings and click "Next"
+    -  Review it and click "Create Stack"
+    -  Wait for some time. You can view the different resources that are created. 
+    -  The status of "FibonacciApp" will change to "CREATE_COMPLETE".
+    -  In AWS Console, search "EC2".
+    -  Click "Instances (running)"
+    -  You can verify that the instance is in "Running" state.
+    -  Click the running instance to view its details. 
+    -  Note down the Public IPV4 address.
+    -  Verification - Type opening the Public IP in a new browser tab (or even from your phone)
+    -  On your local computer, open Terminal/Command Prompt
+    -  Change directory to the folder where you have stored your AWS Key (.pem file)
+    -  Type `ssh -i <key-name> ec2-user@<aws-public-ip>`
+    -  Note: You can also use Public IPv4 DNS to connect to the instance
+    -  Type "Yes" if prompted
+    -  Verification - Terminal/CMD should show "ec2-user@ip-ww-xx-yy-zz". 
+    -  Run the commands from "setup.sh" file (found in this repo) one by one.
+        -   `sudo yum install git -y`
+        -   `sudo yum remove httpd httpd-tools`
+        -   `sudo yum install -y httpd24 php72`
+        -   `sudo service httpd start`
+        -   Verification output - "Starting httpd:          [  OK  ]"
+    -  Change directory to /var/www/html using `cd /var/www/html/`
+    -  Create a new php file using `sudo nano fibonacci.php`
+    -  Copy paste the code from "fibonacci.php" file (found in this repo) into the fibonacci.php file you just created in the EC2-instance.
+    -  To save and close, do the following:
+        -   `Ctrl + O`
+        -   Enter
+        -   `Ctrl + X`
+    -  In your browser, open the URL `<public-IP>/fibonacci.php`
+    -  You can also pass in the number of terms as parameter `<public-IP>/fibonacci.php?numterms=15`
+    -  Verification - The web page should display the first n numbers of the fibonacci sequence.
+    
+    
+- AWS CLI
+    -   In your AWS Academy Learner Lab page, you will have a terminal. This is AWS CLI for your AWS Academy accounts. 
+    -   For your personal AWS Accounts, you can download the AWS CLI tool. Check out https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+    -   For this demo, we will be using the terminal from Learner lab page.
+    -   Create a VPC using the command `aws ec2 create-vpc --cidr-block 10.0.0.0/16`
+        -   Make note of `<VpcId>`
+    -   Create a Subnet using the command `aws ec2 create-subnet --vpc-id <vpcId> --cidr-block 10.0.0.0/24`
+        -   Make note of `<SubnetId>`
+    -   Create an Internet Gateway using the command `aws ec2 create-internet-gateway`
+        -   Make note of `<InternetGatewayId>`
+    -   Attach the Internet Gateway to VPC using the command `aws ec2 attach-internet-gateway --vpc-id <vpcId> --internet-gateway-id <InternetGatewayId>`
+    -   Create a Route Table using the command `aws ec2 create-route-table --vpc-id <vpcId>`
+        -   Make note of `<RouteTableId>`
+    -   Create the Route to this Route table using the command `aws ec2 create-route --route-table-id <RouteTableId> --destination-cidr-block 0.0.0.0/0 --gateway-id <InternetGateway>`
+    -   Verify whether route table and subnets are created and assigned successfully using the commands
+        -   `aws ec2 describe-route-tables --route-table-id <RouteTableId>`
+        -   `aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" --query "Subnets[*].{ID:SubnetId,CIDR:CidrBlock}"`
+    -   Associate the route table with the subnet using the command `aws ec2 associate-route-table --subnet-id <SubnetId> --route-table-id <RouteTableId>`
+    -   Make the subnet as public by mapping the public IP to the subnet using the command `aws ec2 modify-subnet-attribute --subnet-id <SubnetId> --map-public-ip-on-launch`
+    -   Create a security group to Allow HTTP and SSH traffic using the command `aws ec2 create-security-group --group-name security-group-http-ssh --description "Allow HTTP and SSH traffic" --vpc-id <vpcId>`
+        -   Make note of the `<GroupID>`
+    -   Add a inbound rule to accept SSH requests using the command `aws ec2 authorize-security-group-ingress --group-id <GroupId> --protocol tcp --port 22 --cidr 0.0.0.0/0`
+    -   Add another inbound rule to accept HTTP requests using the command `aws ec2 authorize-security-group-ingress --group-id <GroupId> --protocol tcp --port 80 --cidr 0.0.0.0/0`
+    -   Run the EC2 Instance using the command `aws ec2 run-instances --image-id ami-026b57f3c383c2eec --count 1 --instance-type t2.micro --key-name <Keypair-name> --security-group-ids <SecurityGroupId> --subnet-id <SubnetId>`
+        -   For `<Keypair-name>`, use the name of the key your created. For example, aws-<unityID>
+        -   Fir image-id, go to AWS Console and search for AMI Catalog. Select one of the AMIs. The AMI ID can be found in the next line to the name of the AMI. For example, for the "Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type", the AMI ID is `ami-026b57f3c383c2eec`
+    -   You can verify if the instance is running by going to the AWS Console and checking the running EC2 instances.
+    -   On your local computer, open Terminal/Command Prompt
+    -   Change directory to the folder where you have stored your AWS Key (.pem file)
+    -   Type `ssh -i <key-name> ec2-user@<aws-public-ip>`
+    -   Note: You can also use Public IPv4 DNS to connect to the instance
+    -   Type "Yes" if prompted
+    -   Verification - Terminal/CMD should show "ec2-user@ip-ww-xx-yy-zz". run the commands from "setup.sh" file (found in this repo) one by one.
+        -   `sudo yum install git -y`
+        -   `sudo yum remove httpd httpd-tools`
+        -   `sudo yum install -y httpd php`
+        -   `sudo service httpd start`
+        -   `sudo systemctl enable httpd`
+        -   Verification output - "Starting httpd: [ OK ]"
+    -   Change directory to /var/www/html using `cd /var/www/html/`
+    -   Create a new php file using `sudo nano fibonacci.php`
+    -   Copy paste the code from "fibonacci.php" file (found in this repo) into the fibonacci.php file you just created in the EC2-instance.
+    -   To save and close, do the following:
+        -   `Ctrl + O`
+        -   Enter
+        -   `Ctrl + X`
+    -   In your browser, open the URL `<public-IP>/fibonacci.php`
+    -   You can also pass in the number of terms as parameter `<public-IP>/fibonacci.php?numterms=15`
+    -   Verification - The web page should display the first n numbers of the fibonacci sequence.
+    
